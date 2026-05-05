@@ -43,6 +43,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation(files("libs/ffmpeg-kit-full-gpl-5.1.LTS.aar"))
-    implementation("com.arthenica:smart-exception-java:0.2.1")
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
 }
