@@ -7,9 +7,7 @@ import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +32,9 @@ public class FilesFragment extends Fragment {
     private List<File> convertedFilesList = new ArrayList<>();
     private File[] allFilesRaw;
 
+    // YENİ: Kullanıcının seçtiği sıralama türünü hafızada tutuyoruz (Varsayılan: 0 - En Yeni)
+    private int currentSortType = 0;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -54,8 +55,10 @@ public class FilesFragment extends Fragment {
         filesRecyclerView.setAdapter(adapter);
 
         setupSortingSpinner();
-        loadConvertedFilesRaw();
-        sortFiles(0);
+
+        // İlk açılışta dosyaları yükle
+        refreshFiles();
+
         new androidx.recyclerview.widget.ItemTouchHelper(new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT | androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
@@ -93,8 +96,28 @@ public class FilesFragment extends Fragment {
                 updateEmptyView();
             }
         }).attachToRecyclerView(filesRecyclerView);
-        return view;
 
+        return view;
+    }
+
+    // YENİ: Dosyaları baştan okuyup, mevcut sıralamaya göre tekrar listeler
+    private void refreshFiles() {
+        loadConvertedFilesRaw();
+        sortFiles(currentSortType);
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden) {
+            refreshFiles();
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshFiles();
     }
 
     private void setupSortingSpinner() {
@@ -116,6 +139,7 @@ public class FilesFragment extends Fragment {
     }
 
     private void sortFiles(int sortType) {
+        this.currentSortType = sortType; // Seçilen sıralamayı hafızaya al
         convertedFilesList.clear();
 
         if (allFilesRaw != null) {
@@ -166,7 +190,6 @@ public class FilesFragment extends Fragment {
             String fileName = file.getName().toLowerCase();
             String mimeType = "*/*";
 
-            // MIME Type Belirleme
             if (fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi") || fileName.endsWith(".mov")) {
                 mimeType = "video/*";
             } else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a") || fileName.endsWith(".aac") || fileName.endsWith(".flac")) {
@@ -176,7 +199,7 @@ public class FilesFragment extends Fragment {
             } else if (fileName.endsWith(".pdf")) {
                 mimeType = "application/pdf";
             } else if (fileName.endsWith(".zip")) {
-            mimeType = "application/zip";
+                mimeType = "application/zip";
             }
 
             intent.setDataAndType(fileUri, mimeType);

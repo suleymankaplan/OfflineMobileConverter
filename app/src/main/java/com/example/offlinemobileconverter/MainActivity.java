@@ -1,43 +1,47 @@
 package com.example.offlinemobileconverter;
 
-import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import android.os.Bundle;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+
+    final Fragment homeFragment = new HomeFragment();
+    final Fragment filesFragment = new FilesFragment();
+    final Fragment aboutFragment = new AboutFragment();
+    final FragmentManager fm = getSupportFragmentManager();
+    Fragment activeFragment = homeFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation_view);
 
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new HomeFragment())
-                    .commit();
-        }
+        fm.beginTransaction().add(R.id.fragment_container, aboutFragment, "3").hide(aboutFragment).commit();
+        fm.beginTransaction().add(R.id.fragment_container, filesFragment, "2").hide(filesFragment).commit();
+        fm.beginTransaction().add(R.id.fragment_container, homeFragment, "1").commit();
 
-        bottomNav.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
+        bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_home) {
-                selectedFragment = new HomeFragment();
+                fm.beginTransaction().hide(activeFragment).show(homeFragment).commit();
+                activeFragment = homeFragment;
+                return true;
             } else if (itemId == R.id.nav_files) {
-                selectedFragment = new FilesFragment();
+                fm.beginTransaction().hide(activeFragment).show(filesFragment).commit();
+                activeFragment = filesFragment;
+                return true;
             } else if (itemId == R.id.nav_about) {
-                selectedFragment = new AboutFragment();
+                fm.beginTransaction().hide(activeFragment).show(aboutFragment).commit();
+                activeFragment = aboutFragment;
+                return true;
             }
-
-            if (selectedFragment != null) {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, selectedFragment)
-                        .commit();
-            }
-            return true;
+            return false;
         });
     }
 }

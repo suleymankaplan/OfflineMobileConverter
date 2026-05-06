@@ -188,17 +188,35 @@
                         android:textColor="?android:attr/textColorPrimary" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/convertButton"
-                    style="@style/Widget.Material3.Button"
+                <!-- YENİ: Buton Grubu -->
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="60dp"
-                    android:layout_marginTop="16dp"
-                    android:text="Dönüştür"
-                    app:cornerRadius="12dp"
-                    android:textSize="16sp"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/convertButton"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="Dönüştür"
+                        app:cornerRadius="12dp"
+                        android:textSize="16sp"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/cancelButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="60dp"
+                        android:text="İptal Et"
+                        android:textColor="@color/design_default_color_error"
+                        app:strokeColor="@color/design_default_color_error"
+                        app:cornerRadius="12dp"
+                        android:textSize="16sp"
+                        android:visibility="gone" />
+                </FrameLayout>
 
                 <ProgressBar
                     android:id="@+id/progressBar"

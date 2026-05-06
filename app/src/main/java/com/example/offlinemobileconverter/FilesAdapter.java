@@ -45,7 +45,7 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
 
         String name = file.getName().toLowerCase();
         if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".flac")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play); // Ses
+            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play);
         } else if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp")) {
             holder.fileIcon.setImageResource(android.R.drawable.ic_menu_gallery);
         } else if (name.endsWith(".pdf")) {
