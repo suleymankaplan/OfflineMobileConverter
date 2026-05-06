@@ -56,8 +56,45 @@ public class FilesFragment extends Fragment {
         setupSortingSpinner();
         loadConvertedFilesRaw();
         sortFiles(0);
+        new androidx.recyclerview.widget.ItemTouchHelper(new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT | androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
 
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getAdapterPosition();
+                File fileToDelete = convertedFilesList.get(position);
+
+                final File backupFile = fileToDelete;
+                final int backupPosition = position;
+
+                adapter.removeItem(position);
+
+                com.google.android.material.snackbar.Snackbar.make(filesRecyclerView, "Dosya silindi", com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                        .setAction("GERİ AL", v -> {
+                            convertedFilesList.add(backupPosition, backupFile);
+                            adapter.notifyItemInserted(backupPosition);
+                            updateEmptyView();
+                        })
+                        .addCallback(new com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback<com.google.android.material.snackbar.Snackbar>() {
+                            @Override
+                            public void onDismissed(com.google.android.material.snackbar.Snackbar transientBottomBar, int event) {
+                                if (event != DISMISS_EVENT_ACTION) {
+                                    if (backupFile.exists()) {
+                                        backupFile.delete();
+                                        android.media.MediaScannerConnection.scanFile(requireContext(), new String[]{backupFile.getAbsolutePath()}, null, null);
+                                    }
+                                }
+                            }
+                        }).show();
+
+                updateEmptyView();
+            }
+        }).attachToRecyclerView(filesRecyclerView);
         return view;
+
     }
 
     private void setupSortingSpinner() {
@@ -126,24 +163,29 @@ public class FilesFragment extends Fragment {
             Uri fileUri = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".provider", file);
             Intent intent = new Intent(Intent.ACTION_VIEW);
 
-            String mimeType = "video/*";
             String fileName = file.getName().toLowerCase();
-            if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".aac") || fileName.endsWith(".flac")) {
+            String mimeType = "*/*";
+
+            // MIME Type Belirleme
+            if (fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi") || fileName.endsWith(".mov")) {
+                mimeType = "video/*";
+            } else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a") || fileName.endsWith(".aac") || fileName.endsWith(".flac")) {
                 mimeType = "audio/*";
+            } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png") || fileName.endsWith(".webp")) {
+                mimeType = "image/*";
+            } else if (fileName.endsWith(".pdf")) {
+                mimeType = "application/pdf";
+            } else if (fileName.endsWith(".zip")) {
+            mimeType = "application/zip";
             }
 
             intent.setDataAndType(fileUri, mimeType);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
-
-        } catch (IllegalArgumentException e) {
-            android.util.Log.e("FILE_OPEN", "FileProvider Hatası: " + e.getMessage());
-            Toast.makeText(requireContext(), "Güvenlik yolu hatası. Lütfen Logcat'e bakın.", Toast.LENGTH_SHORT).show();
         } catch (android.content.ActivityNotFoundException e) {
-            Toast.makeText(requireContext(), "Cihazda bu dosyayı açacak bir medya oynatıcı yok!", Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), "Bu dosyayı açacak uygun bir uygulama bulunamadı.", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            android.util.Log.e("FILE_OPEN", "Bilinmeyen Hata: " + e.getMessage());
-            Toast.makeText(requireContext(), "Beklenmeyen bir hata oluştu.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Dosya açılırken bir hata oluştu.", Toast.LENGTH_SHORT).show();
         }
     }
 

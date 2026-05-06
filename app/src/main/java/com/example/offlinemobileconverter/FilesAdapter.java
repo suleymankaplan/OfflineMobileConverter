@@ -41,20 +41,21 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
         long fileSizeInBytes = file.length();
         long fileSizeInKB = fileSizeInBytes / 1024;
         long fileSizeInMB = fileSizeInKB / 1024;
+        holder.fileSizeText.setText(fileSizeInMB > 0 ? fileSizeInMB + " MB" : fileSizeInKB + " KB");
 
-        if (fileSizeInMB > 0) {
-            holder.fileSizeText.setText(fileSizeInMB + " MB");
-        } else {
-            holder.fileSizeText.setText(fileSizeInKB + " KB");
-        }
-
-        if (file.getName().toLowerCase().endsWith(".mp3") || file.getName().toLowerCase().endsWith(".wav")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play);
+        String name = file.getName().toLowerCase();
+        if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".flac")) {
+            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play); // Ses
+        } else if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp")) {
+            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_gallery);
+        } else if (name.endsWith(".pdf")) {
+            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_edit);
+        } else if (name.endsWith(".zip")) {
+            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_save);
         } else {
             holder.fileIcon.setImageResource(android.R.drawable.presence_video_online);
         }
 
-        // Tıklama Olayları
         holder.btnPlayFile.setOnClickListener(v -> listener.onPlayClick(file));
         holder.btnOpenFolder.setOnClickListener(v -> listener.onFolderClick());
     }
@@ -79,5 +80,9 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
             btnPlayFile = itemView.findViewById(R.id.btnPlayFile);
             btnOpenFolder = itemView.findViewById(R.id.btnOpenFolder);
         }
+    }
+    public void removeItem(int position) {
+        fileList.remove(position);
+        notifyItemRemoved(position);
     }
 }

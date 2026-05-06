@@ -108,10 +108,13 @@ public class HomeFragment extends Fragment {
     private void openFilePicker() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
-        String[] mimetypes = {"video/*", "audio/*"};
+
+        // YENİ: "application/pdf" eklendi! Artık belgeler de seçilebilir.
+        String[] mimetypes = {"video/*", "audio/*", "image/*", "application/pdf"};
+
         intent.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(Intent.createChooser(intent, "Bir Medya Dosyası Seçin"), FILE_PICKER_REQUEST_CODE);
+        startActivityForResult(Intent.createChooser(intent, "Bir Dosya Seçin"), FILE_PICKER_REQUEST_CODE);
     }
 
     @Override
@@ -164,25 +167,37 @@ public class HomeFragment extends Fragment {
 
     private void setupFormatSpinner(String currentExtension) {
         List<String> availableFormats = new ArrayList<>();
-        switch (currentExtension) {
-            case "mp4": case "mkv": case "avi": case "mov":
-                availableFormats.add("mp4"); availableFormats.add("mkv"); availableFormats.add("avi");
-                availableFormats.add("mp3"); availableFormats.add("wav"); availableFormats.add("aac");
-                break;
-            case "mp3": case "wav": case "aac": case "flac": case "m4a":
-                availableFormats.add("mp3"); availableFormats.add("wav");
-                availableFormats.add("aac"); availableFormats.add("flac");
-                break;
-            default:
-                availableFormats.add("mp4"); availableFormats.add("mp3"); availableFormats.add("wav");
+        String ext = currentExtension.toLowerCase();
+
+        // VİDEO FORMATLARI
+        if (ext.equals("mp4") || ext.equals("mkv") || ext.equals("avi") || ext.equals("mov") || ext.equals("webm")) {
+            availableFormats.add("mp4"); availableFormats.add("mkv"); availableFormats.add("avi");
+            availableFormats.add("mov"); availableFormats.add("mp3"); availableFormats.add("wav");
+        }
+        // SES FORMATLARI (M4A EKLENDİ)
+        else if (ext.equals("mp3") || ext.equals("wav") || ext.equals("aac") || ext.equals("flac") || ext.equals("m4a") || ext.equals("ogg")) {
+            availableFormats.add("mp3"); availableFormats.add("wav"); availableFormats.add("aac");
+            availableFormats.add("m4a"); availableFormats.add("flac");
+        }
+        // GÖRSEL FORMATLARI (HEIC EKLENDİ)
+        else if (ext.equals("heic") || ext.equals("heif") || ext.equals("jpg") || ext.equals("jpeg") || ext.equals("png") || ext.equals("webp")) {
+            availableFormats.add("jpg"); availableFormats.add("png"); availableFormats.add("webp");
+            availableFormats.add("pdf"); // FFmpeg görselleri PDF yapabilir!
+        }
+        else if (ext.equals("pdf")) {
+            availableFormats.add("jpg"); availableFormats.add("png"); availableFormats.add("webp");
+        }
+        else {
+            availableFormats.add("mp4"); availableFormats.add("mp3"); availableFormats.add("jpg");
         }
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, availableFormats);
         formatAutoComplete.setAdapter(adapter);
 
         if (!availableFormats.isEmpty()) {
-            String defaultSelection = availableFormats.contains(currentExtension) ? currentExtension : availableFormats.get(0);
+            String defaultSelection = availableFormats.contains(ext) ? ext : availableFormats.get(0);
             formatAutoComplete.setText(defaultSelection, false);
+            checkAndToggleAdvancedOptions(defaultSelection);
         }
     }
 
@@ -200,13 +215,13 @@ public class HomeFragment extends Fragment {
 
     private void checkAndToggleAdvancedOptions(String targetFormat) {
         boolean isVideo = targetFormat.equals("mp4") || targetFormat.equals("mkv") || targetFormat.equals("avi") || targetFormat.equals("mov");
-        if (isVideo) {
-            resolutionInputLayout.setVisibility(View.VISIBLE);
-            qualityInputLayout.setVisibility(View.VISIBLE);
-        } else {
-            resolutionInputLayout.setVisibility(View.GONE);
-            qualityInputLayout.setVisibility(View.GONE);
-        }
+        boolean isAudio = targetFormat.equals("mp3") || targetFormat.equals("wav") || targetFormat.equals("aac") || targetFormat.equals("m4a") || targetFormat.equals("flac");
+        boolean isImage = targetFormat.equals("jpg") || targetFormat.equals("png") || targetFormat.equals("webp") || targetFormat.equals("pdf");
+
+        resolutionInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
+        qualityInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
+
+        trimLayout.setVisibility((isVideo || isAudio) ? View.VISIBLE : View.GONE);
     }
 
     private int parseTimeToSeconds(String timeStr) {
@@ -230,6 +245,14 @@ public class HomeFragment extends Fragment {
     }
 
     private void startConversion(String inputPath, String targetFormat) {
+        if (inputPath.toLowerCase().endsWith(".pdf")) {
+            convertPdfToImagesAndZip(inputPath, targetFormat);
+            return;
+        }
+        if (targetFormat.equalsIgnoreCase("pdf")) {
+            convertToPdfNative(inputPath);
+            return;
+        }
         final int originalDuration = getVideoDuration(inputPath) / 1000;
         final java.util.concurrent.atomic.AtomicBoolean isFinished = new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -242,7 +265,7 @@ public class HomeFragment extends Fragment {
 
         if (startSec > 0) expectedDuration -= startSec;
         if (endSec > 0 && endSec > startSec) expectedDuration = endSec - startSec;
-        if (expectedDuration <= 0) expectedDuration = 1; // Sıfıra bölme hatasını engelle
+        if (expectedDuration <= 0) expectedDuration = 1;
 
         final int finalExpectedDuration = expectedDuration;
 
@@ -364,6 +387,62 @@ public class HomeFragment extends Fragment {
             }
         });
     }
+    private void convertToPdfNative(String inputPath) {
+        requireActivity().runOnUiThread(() -> {
+            progressBar.setVisibility(View.VISIBLE);
+            progressPercentage.setVisibility(View.VISIBLE);
+            progressBar.setProgress(50); // Hazırlanıyor
+            statusText.setText("Durum: PDF oluşturuluyor...");
+        });
+
+        new Thread(() -> {
+            try {
+                android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(inputPath);
+                if (bitmap == null) throw new Exception("Görsel yüklenemedi");
+
+                android.graphics.pdf.PdfDocument document = new android.graphics.pdf.PdfDocument();
+                android.graphics.pdf.PdfDocument.PageInfo pageInfo = new android.graphics.pdf.PdfDocument.PageInfo.Builder(bitmap.getWidth(), bitmap.getHeight(), 1).create();
+                android.graphics.pdf.PdfDocument.Page page = document.startPage(pageInfo);
+
+                android.graphics.Canvas canvas = page.getCanvas();
+                canvas.drawBitmap(bitmap, 0, 0, null);
+                document.finishPage(page);
+
+                String uniqueId = String.valueOf(System.currentTimeMillis() % 10000);
+                String outFileName = currentOriginalFileName + "_converted_" + uniqueId + ".pdf";
+                File outputFile = new File(requireContext().getCacheDir(), outFileName);
+
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(outputFile);
+                document.writeTo(fos);
+                document.close();
+                fos.close();
+
+                requireActivity().runOnUiThread(() -> {
+                    boolean isSaved = saveToDownloads(outputFile.getAbsolutePath(), outFileName);
+                    if (isSaved) {
+                        statusText.setText("Başarılı! ✅\nPDF Kaydedildi.");
+                        progressBar.setProgress(100);
+                        progressPercentage.setText("İşlem Tamamlandı! 🚀");
+                    } else {
+                        statusText.setText("Hata: PDF kaydedilemedi!");
+                    }
+                    unlockUI();
+
+                    new android.os.Handler().postDelayed(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        progressPercentage.setVisibility(View.GONE);
+                    }, 3000);
+                });
+
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    statusText.setText("Hata! PDF oluşturulamadı.");
+                    Log.e("PDF_ERROR", e.getMessage());
+                    unlockUI();
+                });
+            }
+        }).start();
+    }
 
     private boolean saveToDownloads(String sourceFilePath, String fileName) {
         try {
@@ -479,5 +558,104 @@ public class HomeFragment extends Fragment {
                 Toast.makeText(requireContext(), "Dosyayı kaydetmek için bu izin şarttır!", Toast.LENGTH_LONG).show();
             }
         }
+    }
+    // YENİ: PDF sayfalarını resme çevirip ZIP olarak paketleyen motor
+    private void convertPdfToImagesAndZip(String inputPath, String targetFormat) {
+        requireActivity().runOnUiThread(() -> {
+            progressBar.setVisibility(View.VISIBLE);
+            progressPercentage.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
+            statusText.setText("Durum: PDF sayfaları ayrıştırılıyor...");
+
+            convertButton.setEnabled(false); selectFileButton.setEnabled(false);
+            formatInputLayout.setEnabled(false);
+        });
+
+        new Thread(() -> {
+            try {
+                // 1. PDF Dosyasını Aç
+                File pdfFile = new File(inputPath);
+                android.os.ParcelFileDescriptor fd = android.os.ParcelFileDescriptor.open(pdfFile, android.os.ParcelFileDescriptor.MODE_READ_ONLY);
+                android.graphics.pdf.PdfRenderer renderer = new android.graphics.pdf.PdfRenderer(fd);
+                int pageCount = renderer.getPageCount();
+
+                // 2. Çıktı Zip Dosyasını Hazırla
+                String uniqueId = String.valueOf(System.currentTimeMillis() % 10000);
+                String zipFileName = currentOriginalFileName + "_converted_" + uniqueId + ".zip";
+                File zipFile = new File(requireContext().getCacheDir(), zipFileName);
+
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(zipFile);
+                java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(fos);
+
+                // 3. Sıkıştırma formatını belirle
+                android.graphics.Bitmap.CompressFormat compressFormat = android.graphics.Bitmap.CompressFormat.JPEG;
+                if (targetFormat.equalsIgnoreCase("png")) compressFormat = android.graphics.Bitmap.CompressFormat.PNG;
+                else if (targetFormat.equalsIgnoreCase("webp")) compressFormat = android.graphics.Bitmap.CompressFormat.WEBP;
+
+                // 4. Tüm sayfaları tek tek işle
+                for (int i = 0; i < pageCount; i++) {
+                    android.graphics.pdf.PdfRenderer.Page page = renderer.openPage(i);
+
+                    // Yüksek kalite için sayfayı 2 kat büyütüyoruz (Örn: A4 boyutu 1190x1684 piksel olur)
+                    int width = (int) (page.getWidth() * 2.0);
+                    int height = (int) (page.getHeight() * 2.0);
+                    android.graphics.Bitmap bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888);
+
+                    // Şeffaf arka planı beyaz yap (JPEG siyaha dönmesin diye)
+                    android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                    canvas.drawColor(android.graphics.Color.WHITE);
+
+                    // Sayfayı Bitmap'e çiz
+                    page.render(bitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+
+                    // Zip dosyasına yeni bir giriş (Entry) ekle
+                    String imageFileName = "sayfa_" + (i + 1) + "." + targetFormat;
+                    java.util.zip.ZipEntry entry = new java.util.zip.ZipEntry(imageFileName);
+                    zos.putNextEntry(entry);
+
+                    // Bitmap'i sıkıştırıp Zip'in içine yaz
+                    bitmap.compress(compressFormat, 90, zos);
+                    zos.closeEntry();
+                    page.close();
+                    bitmap.recycle(); // Bellek sızıntısını önle (Çok önemli)
+
+                    // İlerleme çubuğunu güncelle
+                    final int progress = (int) (((i + 1) / (float) pageCount) * 100);
+                    final int currentPage = i + 1;
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setProgress(progress);
+                        progressPercentage.setText("%" + progress + " (Sayfa " + currentPage + "/" + pageCount + ")");
+                    });
+                }
+
+                // 5. Zip'i Kapat ve Dosyayı İndirilenler Klasörüne Al
+                zos.close(); fos.close(); renderer.close(); fd.close();
+
+                requireActivity().runOnUiThread(() -> {
+                    boolean isSaved = saveToDownloads(zipFile.getAbsolutePath(), zipFileName);
+                    if (isSaved) {
+                        statusText.setText("Başarılı! ✅\n" + pageCount + " Sayfa Ziplendi.");
+                        progressBar.setProgress(100);
+                        progressPercentage.setText("İşlem Tamamlandı! 🚀");
+                    } else {
+                        statusText.setText("Hata: Zip kaydedilemedi!");
+                        progressPercentage.setText("Başarısız ❌");
+                    }
+                    unlockUI();
+
+                    new android.os.Handler().postDelayed(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        progressPercentage.setVisibility(View.GONE);
+                    }, 3000);
+                });
+
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    statusText.setText("Hata! PDF parçalanamadı.");
+                    android.util.Log.e("PDF_ZIP_ERROR", e.getMessage());
+                    unlockUI();
+                });
+            }
+        }).start();
     }
 }
