@@ -5,9 +5,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="?android:attr/colorBackground">
+    android:background="?android:attr/colorBackground"
+    android:paddingTop="24dp">
 
     <LinearLayout
+        android:paddingTop="24dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -166,7 +168,6 @@
                         android:textColor="?android:attr/textColorPrimary" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- YENİ: Buton Grubu -->
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

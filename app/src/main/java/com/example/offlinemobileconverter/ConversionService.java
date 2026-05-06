@@ -18,7 +18,7 @@ public class ConversionService extends Service {
     public static final String ACTION_START = "ACTION_START";
     public static final String ACTION_UPDATE = "ACTION_UPDATE";
     public static final String ACTION_STOP = "ACTION_STOP";
-    public static final String ACTION_CANCEL = "ACTION_CANCEL"; // YENİ: İptal Komutu
+    public static final String ACTION_CANCEL = "ACTION_CANCEL";
     public static final String EXTRA_PROGRESS = "EXTRA_PROGRESS";
     public static final String EXTRA_TITLE = "EXTRA_TITLE";
 
@@ -48,10 +48,9 @@ public class ConversionService extends Service {
                 stopForeground(true);
                 stopSelf();
             } else if (ACTION_CANCEL.equals(action)) {
-                // YENİ: Bildirimden İptal Edilirse
-                FFmpegKit.cancel(); // FFmpeg motorunu durdur
+                FFmpegKit.cancel();
                 Intent broadcastIntent = new Intent("ACTION_CANCEL_CONVERSION");
-                sendBroadcast(broadcastIntent); // Uygulama açıksa arayüze haber ver
+                sendBroadcast(broadcastIntent);
                 stopForeground(true);
                 stopSelf();
             }
@@ -60,7 +59,6 @@ public class ConversionService extends Service {
     }
 
     private void startForegroundServiceWithNotification(String title) {
-        // YENİ: İptal Butonu Aksiyonu (PendingIntent)
         Intent cancelIntent = new Intent(this, ConversionService.class);
         cancelIntent.setAction(ACTION_CANCEL);
         PendingIntent pendingCancelIntent = PendingIntent.getService(
@@ -96,7 +94,6 @@ public class ConversionService extends Service {
         }
     }
 
-    // YENİ: Kullanıcı uygulamayı tamamen kapatırsa işlemi iptal et
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);

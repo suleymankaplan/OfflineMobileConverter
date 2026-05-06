@@ -1,6 +1,11 @@
 package com.example.offlinemobileconverter;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -8,13 +13,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,9 +40,12 @@ public class FilesFragment extends Fragment {
     private FilesAdapter adapter;
     private List<File> convertedFilesList = new ArrayList<>();
     private File[] allFilesRaw;
-
-    // YENİ: Kullanıcının seçtiği sıralama türünü hafızada tutuyoruz (Varsayılan: 0 - En Yeni)
     private int currentSortType = 0;
+
+    private LinearLayout selectionModeLayout;
+    private TextView selectionCountText;
+    private ImageButton btnDeleteSelected;
+    private ImageButton btnCancelSelection;
 
     @Nullable
     @Override
@@ -43,6 +55,11 @@ public class FilesFragment extends Fragment {
         filesRecyclerView = view.findViewById(R.id.filesRecyclerView);
         emptyViewText = view.findViewById(R.id.emptyViewText);
         sortAutoComplete = view.findViewById(R.id.sortAutoComplete);
+        TextView titleText = view.findViewById(R.id.titleText);
+        selectionModeLayout = view.findViewById(R.id.selectionModeLayout);
+        selectionCountText = view.findViewById(R.id.selectionCountText);
+        btnDeleteSelected = view.findViewById(R.id.btnDeleteSelected);
+        btnCancelSelection = view.findViewById(R.id.btnCancelSelection);
 
         filesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
 
@@ -51,19 +68,93 @@ public class FilesFragment extends Fragment {
             public void onPlayClick(File file) { openMediaFile(file); }
             @Override
             public void onFolderClick() { openDownloadsFolder(); }
+
+            @Override
+            public void onSelectionModeChanged(boolean isSelectionMode, int selectedCount) {
+                if (isSelectionMode) {
+                    selectionModeLayout.setVisibility(View.VISIBLE);
+                    selectionCountText.setText(selectedCount + " Seçildi");
+                    titleText.setVisibility(View.INVISIBLE);
+                    if (selectedCount == 0) {
+                        adapter.setSelectionMode(false);
+                        selectionModeLayout.setVisibility(View.GONE);
+                    }
+                } else {
+                    selectionModeLayout.setVisibility(View.GONE);
+                    titleText.setVisibility(View.VISIBLE);
+                }
+            }
         });
+
         filesRecyclerView.setAdapter(adapter);
 
         setupSortingSpinner();
-
-        // İlk açılışta dosyaları yükle
         refreshFiles();
 
-        new androidx.recyclerview.widget.ItemTouchHelper(new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT | androidx.recyclerview.widget.ItemTouchHelper.RIGHT) {
+        btnDeleteSelected.setOnClickListener(v -> {
+            List<File> filesToDelete = adapter.getSelectedFiles();
+            if (filesToDelete.isEmpty()) return;
+
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("Silme Onayı")
+                    .setMessage("Seçili " + filesToDelete.size() + " dosyayı kalıcı olarak silmek istediğinize emin misiniz?")
+                    .setPositiveButton("Sil", (dialog, which) -> {
+                        for (File f : filesToDelete) {
+                            if (f.exists()) {
+                                f.delete();
+                                android.media.MediaScannerConnection.scanFile(requireContext(), new String[]{f.getAbsolutePath()}, null, null);
+                            }
+                        }
+                        adapter.setSelectionMode(false);
+                        selectionModeLayout.setVisibility(View.GONE);
+                        refreshFiles();
+                        Toast.makeText(requireContext(), filesToDelete.size() + " dosya silindi", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("İptal", null)
+                    .show();
+        });
+
+        btnCancelSelection.setOnClickListener(v -> {
+            adapter.setSelectionMode(false);
+            selectionModeLayout.setVisibility(View.GONE);
+        });
+
+        ItemTouchHelper.SimpleCallback simpleItemTouchCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+
             @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                return false;
+            public void onChildDraw(@NonNull Canvas c, @NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+
+                View itemView = viewHolder.itemView;
+                ColorDrawable background = new ColorDrawable(Color.parseColor("#EA4335"));
+                Drawable icon = ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_delete);
+                icon.setTint(Color.WHITE);
+
+                int iconMargin = (itemView.getHeight() - icon.getIntrinsicHeight()) / 2;
+                int iconTop = itemView.getTop() + iconMargin;
+                int iconBottom = iconTop + icon.getIntrinsicHeight();
+
+                if (dX > 0) {
+                    background.setBounds(itemView.getLeft(), itemView.getTop(), itemView.getLeft() + ((int) dX), itemView.getBottom());
+                    int iconLeft = itemView.getLeft() + iconMargin;
+                    int iconRight = iconLeft + icon.getIntrinsicWidth();
+                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom);
+                } else if (dX < 0) {
+                    background.setBounds(itemView.getRight() + ((int) dX), itemView.getTop(), itemView.getRight(), itemView.getBottom());
+                    int iconRight = itemView.getRight() - iconMargin;
+                    int iconLeft = iconRight - icon.getIntrinsicWidth();
+                    icon.setBounds(iconLeft, iconTop, iconRight, iconBottom);
+                } else {
+                    background.setBounds(0, 0, 0, 0);
+                    icon.setBounds(0, 0, 0, 0);
+                }
+
+                background.draw(c);
+                icon.draw(c);
             }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) { return false; }
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
@@ -92,15 +183,15 @@ public class FilesFragment extends Fragment {
                                 }
                             }
                         }).show();
-
                 updateEmptyView();
             }
-        }).attachToRecyclerView(filesRecyclerView);
+        };
+
+        new ItemTouchHelper(simpleItemTouchCallback).attachToRecyclerView(filesRecyclerView);
 
         return view;
     }
 
-    // YENİ: Dosyaları baştan okuyup, mevcut sıralamaya göre tekrar listeler
     private void refreshFiles() {
         loadConvertedFilesRaw();
         sortFiles(currentSortType);
@@ -109,9 +200,7 @@ public class FilesFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
-        if (!hidden) {
-            refreshFiles();
-        }
+        if (!hidden) refreshFiles();
     }
 
     @Override
@@ -122,13 +211,9 @@ public class FilesFragment extends Fragment {
 
     private void setupSortingSpinner() {
         String[] sortOptions = {"Tarih (En Yeni)", "Tarih (En Eski)", "Boyut (Büyükten Küçüğe)", "Boyut (Küçükten Büyüğe)", "İsim (A-Z)"};
-
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, sortOptions);
         sortAutoComplete.setAdapter(spinnerAdapter);
-
-        sortAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
-            sortFiles(position);
-        });
+        sortAutoComplete.setOnItemClickListener((parent, view, position, id) -> sortFiles(position));
     }
 
     private void loadConvertedFilesRaw() {
@@ -139,7 +224,7 @@ public class FilesFragment extends Fragment {
     }
 
     private void sortFiles(int sortType) {
-        this.currentSortType = sortType; // Seçilen sıralamayı hafızaya al
+        this.currentSortType = sortType;
         convertedFilesList.clear();
 
         if (allFilesRaw != null) {
@@ -151,21 +236,11 @@ public class FilesFragment extends Fragment {
         }
 
         switch (sortType) {
-            case 0: // Tarih (En Yeni)
-                Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
-                break;
-            case 1: // Tarih (En Eski)
-                Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified()));
-                break;
-            case 2: // Boyut (Büyükten Küçüğe)
-                Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f2.length(), f1.length()));
-                break;
-            case 3: // Boyut (Küçükten Büyüğe)
-                Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f1.length(), f2.length()));
-                break;
-            case 4: // İsim (A-Z)
-                Collections.sort(convertedFilesList, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
-                break;
+            case 0: Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified())); break;
+            case 1: Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f1.lastModified(), f2.lastModified())); break;
+            case 2: Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f2.length(), f1.length())); break;
+            case 3: Collections.sort(convertedFilesList, (f1, f2) -> Long.compare(f1.length(), f2.length())); break;
+            case 4: Collections.sort(convertedFilesList, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName())); break;
         }
 
         adapter.notifyDataSetChanged();
@@ -186,41 +261,31 @@ public class FilesFragment extends Fragment {
         try {
             Uri fileUri = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".provider", file);
             Intent intent = new Intent(Intent.ACTION_VIEW);
-
             String fileName = file.getName().toLowerCase();
             String mimeType = "*/*";
 
-            if (fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi") || fileName.endsWith(".mov")) {
-                mimeType = "video/*";
-            } else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a") || fileName.endsWith(".aac") || fileName.endsWith(".flac")) {
-                mimeType = "audio/*";
-            } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png") || fileName.endsWith(".webp")) {
-                mimeType = "image/*";
-            } else if (fileName.endsWith(".pdf")) {
-                mimeType = "application/pdf";
-            } else if (fileName.endsWith(".zip")) {
-                mimeType = "application/zip";
-            }
+            if (fileName.endsWith(".mp4") || fileName.endsWith(".mkv") || fileName.endsWith(".avi") || fileName.endsWith(".mov")) mimeType = "video/*";
+            else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".m4a") || fileName.endsWith(".aac") || fileName.endsWith(".flac")) mimeType = "audio/*";
+            else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".png") || fileName.endsWith(".webp")) mimeType = "image/*";
+            else if (fileName.endsWith(".pdf")) mimeType = "application/pdf";
+            else if (fileName.endsWith(".zip")) mimeType = "application/zip";
 
             intent.setDataAndType(fileUri, mimeType);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
-        } catch (android.content.ActivityNotFoundException e) {
-            Toast.makeText(requireContext(), "Bu dosyayı açacak uygun bir uygulama bulunamadı.", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Dosya açılırken bir hata oluştu.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Bu dosyayı açacak uygulama bulunamadı.", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void openDownloadsFolder() {
-        Toast.makeText(requireContext(), "Dosyalarınız cihazın 'Download' (İndirilenler) klasöründedir.", Toast.LENGTH_LONG).show();
-
+        Toast.makeText(requireContext(), "Dosyalar 'Download' klasöründedir.", Toast.LENGTH_LONG).show();
         try {
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
             intent.setType("*/*");
             startActivity(Intent.createChooser(intent, "Dosya Yöneticisini Seçin"));
         } catch (Exception e) {
-            Toast.makeText(requireContext(), "Cihazda dosya yöneticisi bulunamadı.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Dosya yöneticisi bulunamadı.", Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -1,77 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="#E0E0E0">
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- YENİ: Çoklu Seçim Checkbox'ı -->
+    <CheckBox
+        android:id="@+id/fileCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/fileIcon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:scaleType="centerCrop"
+        android:background="#1A000000" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="12dp">
 
-        <ImageView
-            android:id="@+id/fileIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_media_play"
-            app:tint="?attr/colorPrimary"
-            android:background="#1A000000"
-            android:padding="12dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/fileNameText"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:ellipsize="middle"
+            android:singleLine="true" />
 
-            <TextView
-                android:id="@+id/fileNameText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="video_converted.mp4"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?android:attr/textColorPrimary"
-                android:ellipsize="middle"
-                android:singleLine="true" />
-
-            <TextView
-                android:id="@+id/fileSizeText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="15.4 MB"
-                android:textSize="12sp"
-                android:textColor="?android:attr/textColorSecondary"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/btnOpenFolder"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_agenda"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="?android:attr/textColorSecondary"
-            android:contentDescription="Konumu Aç" />
-
-        <ImageButton
-            android:id="@+id/btnPlayFile"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:src="@android:drawable/ic_media_play"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="?attr/colorPrimary"
-            android:contentDescription="Oynat" />
-
+        <TextView
+            android:id="@+id/fileSizeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="#888888" />
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+
+    <ImageButton
+        android:id="@+id/btnPlayFile"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_media_play"
+        android:contentDescription="Oynat" />
+
+    <ImageButton
+        android:id="@+id/btnOpenFolder"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_view"
+        android:contentDescription="Dosya Konumunu Aç" />
+</LinearLayout>

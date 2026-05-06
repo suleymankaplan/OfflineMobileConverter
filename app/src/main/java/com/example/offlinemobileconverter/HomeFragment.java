@@ -48,11 +48,10 @@ public class HomeFragment extends Fragment {
     private TextInputLayout qualityInputLayout;
     private android.widget.AutoCompleteTextView qualityAutoComplete;
 
-    // YENİ: Slider Bileşenleri
     private LinearLayout trimLayout;
     private RangeSlider trimSlider;
     private TextView trimTimeText;
-    private int currentMediaDuration = 0; // Saniye cinsinden medya süresi
+    private int currentMediaDuration = 0;
 
     private String currentSelectedFilePath = null;
     private String currentOriginalFileName = null;
@@ -89,7 +88,6 @@ public class HomeFragment extends Fragment {
         qualityInputLayout = view.findViewById(R.id.qualityInputLayout);
         qualityAutoComplete = view.findViewById(R.id.qualityAutoComplete);
 
-        // YENİ: Slider Tanımlamaları
         trimLayout = view.findViewById(R.id.trimLayout);
         trimSlider = view.findViewById(R.id.trimSlider);
         trimTimeText = view.findViewById(R.id.trimTimeText);
@@ -131,7 +129,6 @@ public class HomeFragment extends Fragment {
             checkAndToggleAdvancedOptions(selectedFormat);
         });
 
-        // YENİ: Slider Kaydırıldıkça Yazıyı Güncelle
         trimSlider.addOnChangeListener((slider, value, fromUser) -> {
             int start = Math.round(slider.getValues().get(0));
             int end = Math.round(slider.getValues().get(1));
@@ -197,7 +194,6 @@ public class HomeFragment extends Fragment {
                 statusText.setText("📂 Seçili Dosya:\n" + currentFullOriginalFileName);
                 selectFileButton.setText("Başka Bir Dosya Seç");
 
-                // YENİ: Medyanın süresini hesapla ve Slider'ı ayarla
                 currentMediaDuration = getVideoDuration(realPath) / 1000;
                 if (currentMediaDuration > 0) {
                     trimSlider.setValueFrom(0f);
@@ -273,11 +269,9 @@ public class HomeFragment extends Fragment {
         resolutionInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
         qualityInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
 
-        // Sadece video veya ses seçiliyse ve dosyanın süresi varsa slider'ı göster
         trimLayout.setVisibility((isVideo || isAudio) && currentMediaDuration > 0 ? View.VISIBLE : View.GONE);
     }
 
-    // YENİ: Saniyeyi 01:25 gibi metne çeviren yardımcı metot
     private String formatTime(int seconds) {
         int h = seconds / 3600;
         int m = (seconds % 3600) / 60;
@@ -308,7 +302,6 @@ public class HomeFragment extends Fragment {
 
         final java.util.concurrent.atomic.AtomicBoolean isFinished = new java.util.concurrent.atomic.AtomicBoolean(false);
 
-        // YENİ: Slider'dan başlangıç ve bitiş değerlerini al
         int startSec = 0;
         int endSec = currentMediaDuration;
 
@@ -347,18 +340,15 @@ public class HomeFragment extends Fragment {
         String outFileName = currentOriginalFileName + "_converted_" + uniqueId + "." + targetFormat;
         String outputPath = new File(requireContext().getCacheDir(), outFileName).getAbsolutePath();
 
-        // YENİ VE HIZLI KOMUT MANTIĞI
         StringBuilder commandBuilder = new StringBuilder();
         commandBuilder.append("-y ");
 
-        // Hızlı Seeking için -ss girdiden ÖNCE
         if (startSec > 0) {
             commandBuilder.append("-ss ").append(startSec).append(" ");
         }
 
         commandBuilder.append("-i \"").append(inputPath).append("\" ");
 
-        // -to girdiden SONRA
         if (endSec > 0 && endSec < currentMediaDuration) {
             commandBuilder.append("-to ").append(endSec).append(" ");
         }
