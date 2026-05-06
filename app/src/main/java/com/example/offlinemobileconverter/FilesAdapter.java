@@ -3,6 +3,7 @@ package com.example.offlinemobileconverter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -13,9 +14,16 @@ import java.util.List;
 public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHolder> {
 
     private final List<File> fileList;
+    private final OnFileClickListener listener;
 
-    public FilesAdapter(List<File> fileList) {
+    public interface OnFileClickListener {
+        void onPlayClick(File file);
+        void onFolderClick();
+    }
+
+    public FilesAdapter(List<File> fileList, OnFileClickListener listener) {
         this.fileList = fileList;
+        this.listener = listener;
     }
 
     @NonNull
@@ -41,10 +49,14 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
         }
 
         if (file.getName().toLowerCase().endsWith(".mp3") || file.getName().toLowerCase().endsWith(".wav")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play); // Ses ikonu
+            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play);
         } else {
-            holder.fileIcon.setImageResource(android.R.drawable.presence_video_online); // Video ikonu
+            holder.fileIcon.setImageResource(android.R.drawable.presence_video_online);
         }
+
+        // Tıklama Olayları
+        holder.btnPlayFile.setOnClickListener(v -> listener.onPlayClick(file));
+        holder.btnOpenFolder.setOnClickListener(v -> listener.onFolderClick());
     }
 
     @Override
@@ -56,12 +68,16 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
         ImageView fileIcon;
         TextView fileNameText;
         TextView fileSizeText;
+        ImageButton btnPlayFile;
+        ImageButton btnOpenFolder;
 
         public FileViewHolder(@NonNull View itemView) {
             super(itemView);
             fileIcon = itemView.findViewById(R.id.fileIcon);
             fileNameText = itemView.findViewById(R.id.fileNameText);
             fileSizeText = itemView.findViewById(R.id.fileSizeText);
+            btnPlayFile = itemView.findViewById(R.id.btnPlayFile);
+            btnOpenFolder = itemView.findViewById(R.id.btnOpenFolder);
         }
     }
 }
