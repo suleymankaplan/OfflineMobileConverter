@@ -24,7 +24,7 @@ import androidx.fragment.app.Fragment;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.ReturnCode;
-import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.slider.RangeSlider;
 import com.google.android.material.textfield.TextInputLayout;
 
 import java.io.File;
@@ -36,7 +36,7 @@ public class HomeFragment extends Fragment {
     private TextView statusText;
     private Button selectFileButton;
     private Button convertButton;
-    private Button cancelButton; // YENİ: İptal butonu
+    private Button cancelButton;
     private ProgressBar progressBar;
     private TextView progressPercentage;
 
@@ -48,22 +48,23 @@ public class HomeFragment extends Fragment {
     private TextInputLayout qualityInputLayout;
     private android.widget.AutoCompleteTextView qualityAutoComplete;
 
+    // YENİ: Slider Bileşenleri
     private LinearLayout trimLayout;
-    private TextInputEditText startTimeInput;
-    private TextInputEditText endTimeInput;
+    private RangeSlider trimSlider;
+    private TextView trimTimeText;
+    private int currentMediaDuration = 0; // Saniye cinsinden medya süresi
 
     private String currentSelectedFilePath = null;
     private String currentOriginalFileName = null;
     private String currentFullOriginalFileName = null;
     private static final int FILE_PICKER_REQUEST_CODE = 100;
 
-    // YENİ: İptal Şalteri ve Telsizi
     private volatile boolean isCancelled = false;
     private final android.content.BroadcastReceiver cancelReceiver = new android.content.BroadcastReceiver() {
         @Override
         public void onReceive(android.content.Context context, Intent intent) {
             if ("ACTION_CANCEL_CONVERSION".equals(intent.getAction())) {
-                cancelProcess(); // Bildirimden iptal basılırsa burası tetiklenir
+                cancelProcess();
             }
         }
     };
@@ -76,7 +77,7 @@ public class HomeFragment extends Fragment {
         statusText = view.findViewById(R.id.statusText);
         selectFileButton = view.findViewById(R.id.selectFileButton);
         convertButton = view.findViewById(R.id.convertButton);
-        cancelButton = view.findViewById(R.id.cancelButton); // Bağlantı eklendi
+        cancelButton = view.findViewById(R.id.cancelButton);
         progressBar = view.findViewById(R.id.progressBar);
         progressPercentage = view.findViewById(R.id.progressPercentage);
 
@@ -88,11 +89,11 @@ public class HomeFragment extends Fragment {
         qualityInputLayout = view.findViewById(R.id.qualityInputLayout);
         qualityAutoComplete = view.findViewById(R.id.qualityAutoComplete);
 
+        // YENİ: Slider Tanımlamaları
         trimLayout = view.findViewById(R.id.trimLayout);
-        startTimeInput = view.findViewById(R.id.startTimeInput);
-        endTimeInput = view.findViewById(R.id.endTimeInput);
+        trimSlider = view.findViewById(R.id.trimSlider);
+        trimTimeText = view.findViewById(R.id.trimTimeText);
 
-        // YENİ: Receiver'ı Kaydet
         androidx.core.content.ContextCompat.registerReceiver(
                 requireContext(), cancelReceiver, new android.content.IntentFilter("ACTION_CANCEL_CONVERSION"),
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
@@ -107,6 +108,13 @@ public class HomeFragment extends Fragment {
                     return;
                 }
             }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 201);
+                    Toast.makeText(requireContext(), "İşlemi görebilmek için Bildirim izni verip tekrar 'Dönüştür'e basın.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
 
             if (currentSelectedFilePath != null && !formatAutoComplete.getText().toString().isEmpty()) {
                 String targetFormat = formatAutoComplete.getText().toString();
@@ -116,12 +124,18 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // YENİ: İptal Butonu Dinleyicisi
         cancelButton.setOnClickListener(v -> cancelProcess());
 
         formatAutoComplete.setOnItemClickListener((parent, view1, position, id) -> {
             String selectedFormat = parent.getItemAtPosition(position).toString();
             checkAndToggleAdvancedOptions(selectedFormat);
+        });
+
+        // YENİ: Slider Kaydırıldıkça Yazıyı Güncelle
+        trimSlider.addOnChangeListener((slider, value, fromUser) -> {
+            int start = Math.round(slider.getValues().get(0));
+            int end = Math.round(slider.getValues().get(1));
+            trimTimeText.setText("Kesilecek Aralık: " + formatTime(start) + " - " + formatTime(end));
         });
 
         return view;
@@ -131,14 +145,13 @@ public class HomeFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         try {
-            requireContext().unregisterReceiver(cancelReceiver); // Çıkarken telsizi kapat
+            requireContext().unregisterReceiver(cancelReceiver);
         } catch (Exception ignored) {}
     }
 
-    // YENİ: Merkez İptal Metodu
     private void cancelProcess() {
         isCancelled = true;
-        FFmpegKit.cancel(); // FFmpeg C++ motorunu anında durdurur
+        FFmpegKit.cancel();
         stopConversionService();
         requireActivity().runOnUiThread(() -> {
             statusText.setText("Durum: İptal Edildi ❌");
@@ -184,13 +197,21 @@ public class HomeFragment extends Fragment {
                 statusText.setText("📂 Seçili Dosya:\n" + currentFullOriginalFileName);
                 selectFileButton.setText("Başka Bir Dosya Seç");
 
+                // YENİ: Medyanın süresini hesapla ve Slider'ı ayarla
+                currentMediaDuration = getVideoDuration(realPath) / 1000;
+                if (currentMediaDuration > 0) {
+                    trimSlider.setValueFrom(0f);
+                    trimSlider.setValueTo((float) currentMediaDuration);
+                    trimSlider.setValues(0f, (float) currentMediaDuration);
+                    trimTimeText.setText("Kesilecek Aralık: 00:00 - " + formatTime(currentMediaDuration));
+                }
+
                 setupFormatSpinner(extension);
                 setupAdvancedSpinners();
 
                 formatInputLayout.setVisibility(View.VISIBLE);
-                trimLayout.setVisibility(View.VISIBLE);
                 convertButton.setVisibility(View.VISIBLE);
-                cancelButton.setVisibility(View.GONE); // Dosya seçildiğinde iptal butonu gizli
+                cancelButton.setVisibility(View.GONE);
                 progressBar.setVisibility(View.GONE);
                 progressPercentage.setVisibility(View.GONE);
 
@@ -198,8 +219,6 @@ public class HomeFragment extends Fragment {
                     checkAndToggleAdvancedOptions(formatAutoComplete.getText().toString());
                 }
 
-                startTimeInput.setText("");
-                endTimeInput.setText("");
             } else {
                 statusText.setText("Hata: Dosya işlenemedi!");
             }
@@ -253,27 +272,18 @@ public class HomeFragment extends Fragment {
 
         resolutionInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
         qualityInputLayout.setVisibility(isVideo ? View.VISIBLE : View.GONE);
-        trimLayout.setVisibility((isVideo || isAudio) ? View.VISIBLE : View.GONE);
+
+        // Sadece video veya ses seçiliyse ve dosyanın süresi varsa slider'ı göster
+        trimLayout.setVisibility((isVideo || isAudio) && currentMediaDuration > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private int parseTimeToSeconds(String timeStr) {
-        try {
-            if (timeStr == null || timeStr.trim().isEmpty()) return 0;
-            if (timeStr.contains(":")) {
-                String[] parts = timeStr.split(":");
-                int seconds = 0;
-                int multiplier = 1;
-                for (int i = parts.length - 1; i >= 0; i--) {
-                    seconds += Integer.parseInt(parts[i]) * multiplier;
-                    multiplier *= 60;
-                }
-                return seconds;
-            } else {
-                return Integer.parseInt(timeStr);
-            }
-        } catch (Exception e) {
-            return 0;
-        }
+    // YENİ: Saniyeyi 01:25 gibi metne çeviren yardımcı metot
+    private String formatTime(int seconds) {
+        int h = seconds / 3600;
+        int m = (seconds % 3600) / 60;
+        int s = seconds % 60;
+        if (h > 0) return String.format("%02d:%02d:%02d", h, m, s);
+        return String.format("%02d:%02d", m, s);
     }
 
     private void stopConversionService() {
@@ -285,7 +295,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void startConversion(String inputPath, String targetFormat) {
-        isCancelled = false; // Şalteri sıfırla
+        isCancelled = false;
 
         if (inputPath.toLowerCase().endsWith(".pdf")) {
             convertPdfToImagesAndZip(inputPath, targetFormat);
@@ -296,20 +306,18 @@ public class HomeFragment extends Fragment {
             return;
         }
 
-        final int originalDuration = getVideoDuration(inputPath) / 1000;
         final java.util.concurrent.atomic.AtomicBoolean isFinished = new java.util.concurrent.atomic.AtomicBoolean(false);
 
-        String startTimeStr = startTimeInput.getText() != null ? startTimeInput.getText().toString().trim() : "";
-        String endTimeStr = endTimeInput.getText() != null ? endTimeInput.getText().toString().trim() : "";
+        // YENİ: Slider'dan başlangıç ve bitiş değerlerini al
+        int startSec = 0;
+        int endSec = currentMediaDuration;
 
-        int expectedDuration = originalDuration;
-        int startSec = parseTimeToSeconds(startTimeStr);
-        int endSec = parseTimeToSeconds(endTimeStr);
+        if (currentMediaDuration > 0) {
+            startSec = Math.round(trimSlider.getValues().get(0));
+            endSec = Math.round(trimSlider.getValues().get(1));
+        }
 
-        if (startSec > 0) expectedDuration -= startSec;
-        if (endSec > 0 && endSec > startSec) expectedDuration = endSec - startSec;
-        if (expectedDuration <= 0) expectedDuration = 1;
-
+        int expectedDuration = (endSec - startSec) > 0 ? (endSec - startSec) : 1;
         final int finalExpectedDuration = expectedDuration;
 
         requireActivity().runOnUiThread(() -> {
@@ -319,11 +327,11 @@ public class HomeFragment extends Fragment {
             statusText.setText("Durum: İşleniyor...");
 
             convertButton.setVisibility(View.GONE);
-            cancelButton.setVisibility(View.VISIBLE); // İptal butonunu göster
+            cancelButton.setVisibility(View.VISIBLE);
 
             selectFileButton.setEnabled(false);
             formatInputLayout.setEnabled(false); resolutionInputLayout.setEnabled(false); qualityInputLayout.setEnabled(false);
-            startTimeInput.setEnabled(false); endTimeInput.setEnabled(false);
+            trimSlider.setEnabled(false);
 
             Intent serviceIntent = new Intent(requireContext(), ConversionService.class);
             serviceIntent.setAction(ConversionService.ACTION_START);
@@ -339,11 +347,21 @@ public class HomeFragment extends Fragment {
         String outFileName = currentOriginalFileName + "_converted_" + uniqueId + "." + targetFormat;
         String outputPath = new File(requireContext().getCacheDir(), outFileName).getAbsolutePath();
 
+        // YENİ VE HIZLI KOMUT MANTIĞI
         StringBuilder commandBuilder = new StringBuilder();
-        commandBuilder.append("-y -i \"").append(inputPath).append("\" ");
+        commandBuilder.append("-y ");
 
-        if (!startTimeStr.isEmpty()) commandBuilder.append("-ss ").append(startTimeStr).append(" ");
-        if (!endTimeStr.isEmpty()) commandBuilder.append("-to ").append(endTimeStr).append(" ");
+        // Hızlı Seeking için -ss girdiden ÖNCE
+        if (startSec > 0) {
+            commandBuilder.append("-ss ").append(startSec).append(" ");
+        }
+
+        commandBuilder.append("-i \"").append(inputPath).append("\" ");
+
+        // -to girdiden SONRA
+        if (endSec > 0 && endSec < currentMediaDuration) {
+            commandBuilder.append("-to ").append(endSec).append(" ");
+        }
 
         boolean isTargetVideo = targetFormat.equals("mp4") || targetFormat.equals("mkv") || targetFormat.equals("avi") || targetFormat.equals("mov");
 
@@ -358,6 +376,11 @@ public class HomeFragment extends Fragment {
             if (quality.contains("Yüksek")) commandBuilder.append("-crf 18 ");
             else if (quality.contains("Düşük")) commandBuilder.append("-crf 32 ");
             else commandBuilder.append("-crf 26 ");
+
+            int totalCores = Runtime.getRuntime().availableProcessors();
+            int threadsToUse = Math.max(1, totalCores - 1);
+            commandBuilder.append("-threads ").append(threadsToUse).append(" ");
+            commandBuilder.append("-preset superfast ");
         }
 
         commandBuilder.append("\"").append(outputPath).append("\"");
@@ -366,7 +389,7 @@ public class HomeFragment extends Fragment {
 
         FFmpegKit.executeAsync(finalCommand, session -> {
             isFinished.set(true);
-            if (isCancelled) return; // İptal edildiyse dosyayı kaydetme
+            if (isCancelled) return;
 
             if (ReturnCode.isSuccess(session.getReturnCode())) {
                 if (getActivity() != null) {
@@ -544,7 +567,7 @@ public class HomeFragment extends Fragment {
                 else if (targetFormat.equalsIgnoreCase("webp")) compressFormat = android.graphics.Bitmap.CompressFormat.WEBP;
 
                 for (int i = 0; i < pageCount; i++) {
-                    if (isCancelled) break; // İptal edildiyse döngüden çık
+                    if (isCancelled) break;
 
                     android.graphics.pdf.PdfRenderer.Page page = renderer.openPage(i);
                     int width = (int) (page.getWidth() * 2.0);
@@ -579,7 +602,6 @@ public class HomeFragment extends Fragment {
                 }
 
                 if (isCancelled) {
-                    // İptal edildiyse çöp dosyaları temizle ve çık
                     zos.close(); fos.close(); renderer.close(); fd.close();
                     if (zipFile.exists()) zipFile.delete();
                     return;
@@ -668,7 +690,7 @@ public class HomeFragment extends Fragment {
 
         convertButton.setEnabled(true); selectFileButton.setEnabled(true);
         formatInputLayout.setEnabled(true); resolutionInputLayout.setEnabled(true); qualityInputLayout.setEnabled(true);
-        startTimeInput.setEnabled(true); endTimeInput.setEnabled(true);
+        trimSlider.setEnabled(true);
     }
 
     private int getVideoDuration(String path) {

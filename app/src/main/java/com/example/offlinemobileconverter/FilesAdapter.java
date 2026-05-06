@@ -44,16 +44,33 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.FileViewHold
         holder.fileSizeText.setText(fileSizeInMB > 0 ? fileSizeInMB + " MB" : fileSizeInKB + " KB");
 
         String name = file.getName().toLowerCase();
-        if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".flac")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_media_play);
-        } else if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_gallery);
-        } else if (name.endsWith(".pdf")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_edit);
-        } else if (name.endsWith(".zip")) {
-            holder.fileIcon.setImageResource(android.R.drawable.ic_menu_save);
+
+        boolean isImage = name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp");
+        boolean isVideo = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".mov");
+
+        if (isImage || isVideo) {
+            holder.fileIcon.setImageTintList(null);
+
+            com.bumptech.glide.Glide.with(holder.itemView.getContext())
+                    .load(file)
+                    .centerCrop()
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .into(holder.fileIcon);
         } else {
-            holder.fileIcon.setImageResource(android.R.drawable.presence_video_online);
+            com.bumptech.glide.Glide.with(holder.itemView.getContext()).clear(holder.fileIcon);
+
+            int tintColor = androidx.core.content.ContextCompat.getColor(holder.itemView.getContext(), R.color.blue_primary);
+            holder.fileIcon.setImageTintList(android.content.res.ColorStateList.valueOf(tintColor));
+
+            if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".flac")) {
+                holder.fileIcon.setImageResource(android.R.drawable.ic_media_play);
+            } else if (name.endsWith(".pdf")) {
+                holder.fileIcon.setImageResource(android.R.drawable.ic_menu_edit);
+            } else if (name.endsWith(".zip")) {
+                holder.fileIcon.setImageResource(android.R.drawable.ic_menu_save);
+            } else {
+                holder.fileIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+            }
         }
 
         holder.btnPlayFile.setOnClickListener(v -> listener.onPlayClick(file));
