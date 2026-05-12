@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:fitsSystemWindows="true"
     android:background="?android:attr/colorBackground">
 
     <LinearLayout
@@ -13,41 +13,45 @@
         android:padding="24dp"
         android:gravity="center_horizontal">
 
-        <ImageView
-            android:layout_width="96dp"
-            android:layout_height="96dp"
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp"
-            android:src="@android:drawable/ic_menu_share"
-            app:tint="?attr/colorPrimary"
-            android:background="#1A000000"
-            android:padding="20dp" />
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@mipmap/ic_launcher"
+                android:scaleType="centerCrop"
+                android:contentDescription="Uygulama İkonu" />
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Offline Converter"
-            android:textSize="28sp"
+            android:text="Offline Mobile Converter"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textColor="?attr/colorPrimary" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
-            android:text="Sürüm 1.0"
-            android:textColor="?attr/colorPrimary"
+            android:text="Sürüm 1.0.0 (Pro)"
             android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="32dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#E0E0E0">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -58,39 +62,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Proje Ekibi"
+                    android:text="🎯 Proje Amacı"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary"
-                    android:layout_marginBottom="12dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Geliştirici: Süleyman Kaplan"
-                    android:textSize="16sp"
                     android:textColor="?android:attr/textColorPrimary"
-                    android:layout_marginBottom="4dp" />
+                    android:layout_marginBottom="8dp" />
 
-                <View
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="#E0E0E0"
-                    android:layout_marginBottom="12dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Kastamonu Üniversitesi"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="?android:attr/textColorSecondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Bilgisayar Mühendisliği Bölümü"
-                    android:textSize="14sp"
+                    android:text="Offline Mobile Converter; hassas verilerin internete yüklenmeden, tamamen cihaz üzerinde işlenerek maksimum gizlilik ve yüksek performanslı dönüştürme sağlanması amacıyla geliştirilmiştir. FFmpeg motoru ve çok iş parçacıklı (multi-threading) mimarisi ile mobil cihazlarda masaüstü gücünde bir deneyim sunar."
+                    android:lineSpacingExtra="4dp"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -98,11 +80,9 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#E0E0E0">
+            android:layout_marginBottom="32dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -113,30 +93,83 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Proje Vizyonu"
+                    android:text="✅ Desteklenen Formatlar"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary"
-                    android:layout_marginBottom="12dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Bu uygulama, kullanıcı gizliliğini en üst düzeyde tutmak amacıyla tasarlanmıştır. Medya dönüştürme işlemleri bulut sunucular yerine doğrudan cihaz donanımı kullanılarak gerçekleştirilir."
-                    android:textSize="14sp"
-                    android:lineSpacingExtra="4dp"
                     android:textColor="?android:attr/textColorPrimary"
                     android:layout_marginBottom="16dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="• %100 Çevrimdışı Çalışma\n• Sıfır İzin Mimarisi (Android 10+)\n• FFmpeg Native C++ Altyapısı\n• Modern Material 3 Arayüz"
-                    android:textSize="14sp"
-                    android:lineSpacingExtra="6dp"
+                    android:text="🎬 Video:"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MP4, MKV, AVI, MOV, WEBM"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎵 Ses:"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MP3, WAV, AAC, FLAC, M4A, OGG"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🖼️ Görsel:"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="JPG, JPEG, PNG, WEBP, HEIC, HEIF"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📄 Belge (PDF):"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PDF'ten Görsele (ZIP) / Görselden PDF'e"
                     android:textColor="?android:attr/textColorSecondary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Geliştirici"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Süleyman Kaplan\nKastamonu Üniversitesi\nMühendislik ve Mimarlık Fakültesi\nBilgisayar Mühendisliği Bölümü"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="24dp" />
 
     </LinearLayout>
 </ScrollView>
